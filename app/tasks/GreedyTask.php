@@ -15,15 +15,11 @@ use \Cli\Output as Output;
 class GreedyTask extends BaseTask
 {
 
-
 	public function mainAction($params)
 	{
 		parent::initialize($params);
 
-		Output::stdOutGreen(" Greedy algorithm");
-
-
-
+		Output::stdOutGreen("Greedy algorithm");
 	}
 
 }

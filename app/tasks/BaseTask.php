@@ -38,7 +38,7 @@ class BaseTask extends Task {
 
 	public function mainAction()
 	{
-		Output::stdout("Main Action ");
+		Output::stdout("Main Action");
 	}
 
 
@@ -59,12 +59,12 @@ class BaseTask extends Task {
 			}
 
 			// what direction experts could solve
-			elseif ($i <= $this->expertsNum) {
+			elseif ($i <= $this->directionsNum) {
 				$this->setSolvesMatrix($i, $members);
 			}
 
 			// experts costs
-			elseif ($i > $this->expertsNum) {
+			elseif ($i > $this->directionsNum) {
 				$this->setCostsArray($members);
 			}
 
