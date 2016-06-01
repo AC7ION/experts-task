@@ -79,11 +79,11 @@ class BaseTask extends Task {
 	protected function setSolvesMatrix($i, array $members)
 	{
 		if (!isset($this->couldSolve[$i]) || !is_array($this->couldSolve[$i])) {
-			$this->couldSolve[$i] = array();
+			$this->couldSolve[$i-1] = array();
 		}
 
 		foreach ($members as $member) {
-			$this->couldSolve[$i][] = (int)$member;
+			$this->couldSolve[$i-1][] = (int)$member;
 		}
 	}
 
