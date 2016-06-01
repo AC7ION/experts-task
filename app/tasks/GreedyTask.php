@@ -20,6 +20,11 @@ class GreedyTask extends BaseTask
 		parent::initialize($params);
 
 		Output::stdOutGreen("Greedy algorithm");
+
+//		echo $this->countTotalSum(array(0, 3, 5)) . "\n";
+//		echo $this->isExpertAllowed(5, 2) . "\n";
+//		print_r($this->getExpertsDirections(0));
+		$this->isExpertsSolvesTheTask(array(0,1,2,3,4,5));
 	}
 
 }

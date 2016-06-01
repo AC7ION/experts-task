@@ -95,4 +95,55 @@ class BaseTask extends Task {
 		}
 	}
 
+
+	protected function countTotalSum(array $experts)
+	{
+		$sum = 0;
+
+		foreach ($experts as $expert) {
+			if (isset($this->costs[$expert])) {
+				$sum += $this->costs[$expert];
+			}
+		}
+
+		return $sum;
+	}
+
+
+	protected function isExpertAllowed($directionNum, $expertNum)
+	{
+		return $this->couldSolve[$directionNum][$expertNum];
+	}
+
+
+	protected function getExpertsDirections($expertNum)
+	{
+		$allowedDirections = array();
+
+		foreach ($this->couldSolve as $key => $direction) {
+			if ($direction[$expertNum]) {
+				$allowedDirections[] = $key;
+			}
+		}
+
+		return $allowedDirections;
+	}
+
+
+	protected function isExpertsSolvesTheTask(array $experts)
+	{
+		$solvedDirections = array();
+
+		foreach ($experts as $expert) {
+			$expertsDirection = $this->getExpertsDirections($expert);
+			$solvedDirections = array_merge($solvedDirections, $expertsDirection);
+		}
+
+		$solvedDirections = array_unique($solvedDirections);
+		//print_r($solvedDirections);
+
+		//echo count($solvedDirections) . "\n";
+		return $this->directionsNum == count($solvedDirections);
+	}
+
 }
