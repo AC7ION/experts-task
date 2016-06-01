@@ -18,6 +18,26 @@ $ php -m | grep -i "phalcon"
 phalcon
 ```
 
+Input file structure
+--------------------
+```
+(number of directions) (number of experts)
+(couldSolve matrix)
+(costs array)
+```
+
+Example:
+```
+20 6
+0 0 1 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1
+0 1 0 1 0 0 0 0 0 1 0 0 1 0 0 0 0 1 0 0
+1 0 0 0 1 0 1 1 0 0 1 1 0 0 1 0 1 0 1 1
+0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1
+0 0 1 1 1 1 0 0 1 1 1 1 0 0 1 1 1 1 0 1
+1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 1 0 1 0 1
+10 20 30 5 40 11
+```
+
 Database Configuration
 --------------
 Open  `php-cli-app-phalcon/app/config.php` and edit your database connection credentials

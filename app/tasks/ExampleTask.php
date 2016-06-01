@@ -3,7 +3,7 @@
 /**
  * Example of a Task/Cli application
  * 
- * @author Jete O'Keeffe
+ * @author Andrew Korniychuk
  * @version 1.0
  */
 

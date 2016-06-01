@@ -6,7 +6,6 @@
  * a cli script that launches phalcon tasks
  *
  * @package cli
- * @author Jete O'Keeffe
  * @version 1.0
  * @copyright never
  *

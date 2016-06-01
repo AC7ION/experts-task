@@ -71,8 +71,14 @@ class Output {
 	 * @param $msg string
 	 */
 	public static function stdout($msg) {
-		fwrite(STDOUT, $msg . PHP_EOL);
-		self::$_stdout .= $msg . PHP_EOL;
+		fwrite(STDOUT, $msg . "\33[0m" . PHP_EOL);
+		self::$_stdout .= $msg . "\33[0m" . PHP_EOL;
+	}
+
+
+	public static function stdOutGreen($msg) {
+		fwrite(STDOUT, "\e[1;32m" . $msg . "\33[0m" . PHP_EOL);
+		self::$_stdout .= "\e[1;32m" . $msg . "\33[0m" . PHP_EOL;
 	}
 
 
