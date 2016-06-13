@@ -19,10 +19,16 @@ define('INPUT_DIR', dirname(__DIR__) . '/input/');
 
 class BaseTask extends Task {
 
+	// кількість напрямів
 	protected $directionsNum = 0;
+
+	// кількість експертів
 	protected $expertsNum = 0;
 
+	// матриця вартостей
 	protected $costs = array();
+
+	// матриця відповідності експерт -> які задачі може вирішити
 	protected $couldSolve = array();
 
 
@@ -36,12 +42,20 @@ class BaseTask extends Task {
 	}
 
 
+	/**
+	 * Entry point
+	 */
 	public function mainAction()
 	{
 		Output::stdout("Main Action");
 	}
 
 
+	/**
+	 * Reads input data from file
+	 *
+	 * @param $params
+	 */
 	protected function readInputFromFile($params)
 	{
 
@@ -76,6 +90,12 @@ class BaseTask extends Task {
 	}
 
 
+	/**
+	 * Sets solves matrix
+	 *
+	 * @param       $i
+	 * @param array $members
+	 */
 	protected function setSolvesMatrix($i, array $members)
 	{
 		if (!isset($this->couldSolve[$i]) || !is_array($this->couldSolve[$i])) {
@@ -88,6 +108,11 @@ class BaseTask extends Task {
 	}
 
 
+	/**
+	 * Sets costs array
+	 *
+	 * @param $members
+	 */
 	protected function setCostsArray($members)
 	{
 		foreach ($members as $member) {
@@ -96,6 +121,12 @@ class BaseTask extends Task {
 	}
 
 
+	/**
+	 * Counts total sum for given experts
+	 *
+	 * @param array $experts
+	 * @return int
+	 */
 	protected function countTotalSum(array $experts)
 	{
 		$sum = 0;
@@ -110,12 +141,25 @@ class BaseTask extends Task {
 	}
 
 
+	/**
+	 * Is expert could solve given direction
+	 *
+	 * @param $directionNum
+	 * @param $expertNum
+	 * @return mixed
+	 */
 	protected function isExpertAllowed($directionNum, $expertNum)
 	{
 		return $this->couldSolve[$directionNum][$expertNum];
 	}
 
 
+	/**
+	 * Returns directions for given expert
+	 *
+	 * @param $expertNum
+	 * @return array
+	 */
 	protected function getExpertsDirections($expertNum)
 	{
 		$allowedDirections = array();
@@ -130,6 +174,12 @@ class BaseTask extends Task {
 	}
 
 
+	/**
+	 * Returns is experts solves the task by experts keys
+	 *
+	 * @param array $experts array with experts numbers
+ 	 * @return bool
+	 */
 	protected function isExpertsSolvesTheTask(array $experts)
 	{
 		$solvedDirections = array();
