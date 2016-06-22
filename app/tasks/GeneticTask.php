@@ -10,7 +10,8 @@
 namespace Tasks;
 
 use \Cli\Output as Output;
-const QUESTIONS = 50;
+const POPULATION_SIZE = 50;
+const ITERATION = 1000;
 
 class GeneticTask extends BaseTask
 {
@@ -19,20 +20,98 @@ class GeneticTask extends BaseTask
     public function mainAction($params)
     {
         parent::initialize($params);
-
+        $best_prices = array();
+        $best_individual = null;
+        $this->populationRandomise(POPULATION_SIZE);
+        $this->output_population();
         Output::stdOutGreen("Genetic algorithm");
-        $individuals = $this->analysisIndividuals();
-        $bests = $this->bestIndividuals($individuals ['prices'], $individuals['not_assessed']);
-//        $this->output_population();
-        $this->createСhild($bests);
+        for ($i = 0; $i < ITERATION; $i++) {
+            $individuals = $this->analysisIndividuals();
+//            $this->output_population();
+            if (!empty($individuals['not_assessed'])) {
+                $bests = $this->bestIndividuals($individuals ['prices'], $individuals['not_assessed']);
+                $children = $this->createСhild($bests);
+//                $this->output_population();
+
+
+                $this->insertNewChildrens($individuals['not_assessed'], $children);
+                $best_individual = $this->minKey($individuals["prices"]);
+//                $this->output_population();
+            }
+            echo "Поточна найкраща особина " . $best_individual . "\n";
+            $best_prices[] = $this->individualPrice($this->respondToTheQuestion($this->population[$best_individual]));
+            $best_price = $this->individualPrice($this->respondToTheQuestion($this->population[$best_individual]));
+            echo "Ціна найкращого " . $best_price . "\n";
+        }
+//        $best_prices = array_unique($best_prices);
+//        print_r($best_prices);
+//        $best_key = $this->minKey($best_prices);
+
+//        echo "Знайдений найкраща особина на ітерації " . $best_key . "\n";
+//        echo "Ціна найкращого " . $best_prices[$best_key] . "\n";
+
 
     }
+
+
+    /**
+     * insertNewChildrens
+     * Вставляє новосформованих потмків замість особин що вимерли
+     *
+     * @param   array (int)      - індекси особин що не змргли дати заключення і вимерли
+     * @param   array (int)      - массив нових нащадків
+     * @return  int             - популяцію із новими нащадками(можна проводити нову ітерацію цикла)
+     * */
+    private function insertNewChildrens(array $individuals, array $childrens)
+    {
+        foreach ($individuals as $individual) {
+            $children = array_pop($childrens);
+            $this->randomChange($children);
+            $this->population[$individual] = $children;
+        }
+    }
+
+
+    /**
+     * randomChange
+     * Вставляє новосформованих потмків замість особин що вимерли
+     *
+     * @param   array (int)      - новостворена особина
+     * @return  int             - популяцію із новими нащадками(можна проводити нову ітерацію цикла)
+     * */
+    private function randomChange(array $children)
+    {
+        mt_rand(0, $this->expertsNum);
+        $experts = $this->respondToTheQuestion($children);
+        if (!$this->isExpertsSolvesTheTask($experts)) {
+
+            $this->reanimation($children);
+
+        } else {
+            if (mt_rand(0, 1) == 1) {
+                $this->selection($children);
+            }
+
+            if (mt_rand(0, 1) == 1) {
+                $this->mutation($children);
+
+            }
+
+        }
+//        $this->output_population();
+
+    }
+
+
     /**
      * analysisIndividuals
-     * Аналізує всі особини і вибирає хто з них відповів на всі питання, а хто ні
+     * Аналізує всі особини і вибирає хто з них відповів на всі питання, а хто ні і визначає ціну кожної особини
      *
-     * @return  array (int) - закінчений масив нових дочірніх особин (створення розбиттям найкраших особин по точкам схрещування)
-     * Вивід массиву в лінію
+     * @return  array(                                            - масив тих хто дав заключення по всіх питаннях, хто не дав і вартість тих хто дав
+     * 'assessed' => $assessed_individuals,
+     * 'not_assessed' => $not_assessed_individuals,
+     * 'prices' => $individual_prices
+     * );
      * */
     private function analysisIndividuals()
     {
@@ -42,11 +121,10 @@ class GeneticTask extends BaseTask
         $individual_prices = array();
         $assessed_individuals = array();
         $not_assessed_individuals = array();
-        $this->populationRandomise(QUESTIONS);
-        $this->output_population();
 
-        foreach ($this->population as $individuals) {
-            $experts = $this->respondToTheQuestion($individuals);
+
+        foreach ($this->population as $individual) {
+            $experts = $this->respondToTheQuestion($individual);
 
             if ($this->isExpertsSolvesTheTask($experts)) {
                 $a++;
@@ -54,34 +132,242 @@ class GeneticTask extends BaseTask
             } else {
                 $b++;
                 $not_assessed_individuals [] = $i;
-                unset($this->population[$i]);
+                $this->population[$i] = array();
+//                unset($this->population[$i]);
+//                unset($individual);
             }
             $individual_price = $this->individualPrice($experts);
             $individual_prices[] = $individual_price;
             $i++;
         }
-        echo "Ціни особин \n";
+        if (count($not_assessed_individuals) < POPULATION_SIZE/10) {
+
+            $worsts = $this->needDie($not_assessed_individuals, $individual_prices);
+            $not_assessed_individuals = array_merge($not_assessed_individuals, $worsts);
+        }
+//        echo "Ціни особин \n";
+//        $this->outArr($individual_prices);
 //        print_r($individual_prices);
 
         echo "Задачі виконали $a популяції\n";
         echo "Задачі не виконали $b популяції\n";
-        echo "assessed_individuals\n";
-        foreach ($assessed_individuals as $expert) {
-            echo $expert . " ";
-        }
-        echo "\n";
-        echo "not_assessed_individuals \n";
-        foreach ($not_assessed_individuals as $expert) {
-            echo $expert . " ";
-        }
-        echo "\n";
+//        echo "assessed_individuals\n";
+//        foreach ($assessed_individuals as $expert) {
+//            echo $expert . " ";
+//        }
+//        echo "\n";
+//        echo "not_assessed_individuals \n";
+//        foreach ($not_assessed_individuals as $expert) {
+//            echo $expert . " ";
+//        }
+//        echo "\n";
 
         return array(
-            'assessed' => $assessed_individuals,
+            'assessed'     => $assessed_individuals,
             'not_assessed' => $not_assessed_individuals,
-            'prices' => $individual_prices
+            'prices'       => $individual_prices
         );
     }
+
+
+    /**
+     * needDie
+     * Міняє місцями 0 і 1
+     *
+     * @param   array (int)           - 0 або 1
+     * @param   array (int)           - 0 або 1
+     * @param   array (int)           - 0 або 1
+     * @return  int           - 1 або 0
+     * */
+    private function needDie(array $not_assessed_individuals, array $individual_prices)
+    {
+        $not_assessed_individuals_size = POPULATION_SIZE / 10;
+        $need_die = $not_assessed_individuals_size - count($not_assessed_individuals);
+        $worsts = array();
+        $i = 0;
+        echo $need_die . "\n";
+        echo $not_assessed_individuals_size . "\n";
+        echo count($not_assessed_individuals) . "\n";
+        while ($i != $need_die) {
+            $max_key = $this->maxKey($individual_prices);
+            if (!in_array($max_key, $not_assessed_individuals)) {
+                $worsts[] = $max_key;
+                unset($individual_prices[$max_key]);
+                $individual_prices = array_values($individual_prices);
+                $i++;
+            } else {
+                unset($individual_prices[$max_key]);
+
+//                $individual_prices = array_values($individual_prices);
+            }
+        }
+//        echo "Need die \n";
+//        $this->outArr($worsts);
+//        echo "Ціни найгірших\n";
+        return $worsts;
+    }
+
+    /**
+     * bestIndividuals
+     * Ключі найдешевших особин
+     *
+     * @param array (int)    - ціни всіх особин що дали заключення по всіх питтаннях
+     * @param array (int)    - особини що не дали заключення по всім питанням
+     * @return  array (int)  - індекси найкращих особин серед тих хто дав заключення по всіх питаннях
+     * */
+    private function bestIndividuals($individual_prices, $not_assessed_individuals)
+    {
+        $need_best = count($not_assessed_individuals);
+        $bests = array();
+        $i = 0;
+        while ($i != $need_best) {
+            $min_key = $this->minKey($individual_prices);
+            if (!in_array($min_key, $not_assessed_individuals)) {
+                $bests[] = $min_key;
+                unset($individual_prices[$min_key]);
+                $individual_prices = array_values($individual_prices);
+                $i++;
+            } else {
+                unset($individual_prices[$min_key]);
+
+//                $individual_prices = array_values($individual_prices);
+            }
+        }
+//        if (!empty($bests)) {
+//            echo "Найдешевше коштують особини:\n";
+//
+//            print_r($bests);
+//        }
+//        else{
+//            echo "Жопа\n";
+//        }
+
+        return $bests;
+    }
+
+
+    /**
+     * maxKey
+     * Ключ найдешевшої особини
+     *
+     * @param array (int) $individual_prices - ціни всіх особин що дали заключення по всіх питтаннях
+     * @return  array (int) $max_key             - індекс особини з найменшою ціною
+     * */
+    private function maxKey($individual_prices)
+    {
+//        echo "MAX ". max ($individual_prices)."\n";
+//        print_r($individual_prices);
+        $max_key = array_search(max($individual_prices) , $individual_prices);
+        return $max_key;
+    }
+
+    /**
+     * replace
+     * Міняє місцями 0 і 1
+     *
+     * @param   int - 0 або 1
+     * @return  int           - 1 або 0
+     * */
+    private function replace($num)
+    {
+        switch ($num) {
+            case 1:
+                $num = 0;
+                break;
+            case 2:
+                $num = 1;
+        }
+
+
+        return $num;
+    }
+
+
+    /**
+     * mutation
+     * Зміна одного випадкового гена (запуск функції випадковий)
+     *
+     * @param array (int)   - одна особина популяції ( один з згенерованих нащадків )
+     * @return  array (int) - одна особина популяції після проведення мутації( один з згенерованих нащадків )
+     * */
+    private function mutation(array $individual)
+    {
+        echo "mutation start \n";
+        $this->outArr($individual);
+        $mutation_gen = mt_rand(0, $this->expertsNum - 1);
+        echo "mutation gen $mutation_gen\n";
+        $individual[$mutation_gen] = $this->replace($individual[$mutation_gen]);
+        echo "mutation end \n";
+        $this->outArr($individual);
+        $experts = $this->respondToTheQuestion($individual);
+        echo "Price " . $this->individualPrice($experts) . "\n";
+        return $individual;
+    }
+
+
+    /**
+     * selection
+     * Зміна одного випадкового гена для покращення результату(запуск функції випадковий)
+     *
+     * @param   array (int) - одна особина популяції ( один з згенерованих нащадків )
+     * @return  array (int) - одна особина популяції після проведення селекції( один з згенерованих нащадків )
+     * */
+    private function selection(array $individual)
+    {
+
+        $experts = $this->respondToTheQuestion($individual);
+        if ($this->isExpertsSolvesTheTask($experts)) {
+            echo "start selection\n";
+            $this->outArr($individual);
+            echo "Price " . $individual_price_to_end = $this->individualPrice($experts) . "\n";
+            foreach ($individual as &$item) {
+                $individual_price_to_start = $this->individualPrice($experts);
+                $item = $this->replace($item);
+                $experts = $this->respondToTheQuestion($individual);
+                $individual_price_to_end = $this->individualPrice($experts);
+                if ($individual_price_to_start <= $individual_price_to_end) {
+                    continue;
+                } else {
+                    break;
+                }
+
+            }
+            echo "end selection\n";
+            $this->outArr($individual);
+            echo "Price " . $individual_price_to_end = $this->individualPrice($experts) . "\n";
+            return $individual;
+        } else {
+            echo "Ця особина не життездатна. Провести селекцію неможливо !!! \n";
+        }
+    }
+
+    /**
+     * reanimation
+     * Зміна випадкових генів для "оживлення" нащадка (запуск функції випадковий)
+     *
+     * @param array (int)   - одна особина популяції ( один з згенерованих нащадків )
+     * @return  array (int) - одна особина популяції після проведення реанімації( один з згенерованих нащадків )
+     * */
+    private function reanimation(array $individual)
+    {
+        $experts = $this->respondToTheQuestion($individual);
+        $this->outArr($experts);
+        if (!$this->isExpertsSolvesTheTask($experts)) {
+            $reanimation_gen = mt_rand(0, $this->expertsNum - 1);
+            $individual[$reanimation_gen] = $this->replace($individual[$reanimation_gen]);
+            $experts = $this->respondToTheQuestion($individual);
+            if ($this->isExpertsSolvesTheTask($experts)) {
+                echo "Реанімація прошла успішно. Тепер ця особина життездатна !!!";
+                return $individual;
+            } else {
+                echo "Реанімація провалилася/ Особина вимре при формуванні наступної популяції\n";
+            }
+        } else {
+            echo "Ця особина життездатна. В реанімації немає сенсу !!! \n";
+        }
+        return $individual;
+    }
+
 
     /**
      * createСhild
@@ -89,56 +375,73 @@ class GeneticTask extends BaseTask
      *
      * @param array (int)   - індекси найкращих особин серед тих хто дав заключення по всіх питаннях
      * @return  array (int) - закінчений масив нових дочірніх особин (створення розбиттям найкраших особин по точкам схрещування)
-     * Вивід массиву в лінію
      * */
     private function createСhild(array $bests)
     {
-        $children = array();
-        for ($i = 0; $i < count($bests); $i++) {
-            $children[] = array();
-        }
-        $bests_count = count($bests);
-        $crossing_points = $this->CrossingPoints($bests);
+        if (isset($bests)) {
+            $childrens = array();
+            for ($i = 0; $i < count($bests); $i++) {
+                $childrens[] = array();
+            }
 
-        for ($i = 0; $i < $bests_count; $i++) {
-            echo "Поточний найкращий \n";
-            $this->outArr($this->population[$bests[$i]]);
-            echo "\n";
-            $spliced_array = $this->individualSplice($crossing_points, $bests, $i);
+            $bests_count = count($bests);
+            $crossing_points = $this->CrossingPoints($bests);
+
+            for ($i = 0; $i < $bests_count; $i++) {
+                $need_array = $this->population[$bests[$i]];
+//                echo "Поточний найкращий \n";
+//                $this->outArr($need_array);
+//                echo "\n";
+
+                $spliced_array = $this->individualSplice($need_array, $crossing_points, $bests, $i);
+
+
 //            echo "spliced_array :\n";
 //            print_r($spliced_array);
 
-            $children = $this->individualMerge($i, $bests_count, $children, $spliced_array);
+                $childrens = $this->individualMerge($i, $bests_count, $childrens, $spliced_array);
 
 
+            }
+
+
+            echo "Нові потомки\n";
+            foreach ($childrens as $children) {
+                $this->outArr($children);
+            }
+//            print_r($childrens);
+            return $childrens;
         }
-
-        echo "Нові потомки\n";
-        print_r($children);
-
 
     }
 
+
     /**
+     * output_population
      * Вивід масиву в лінію
+     * @param
      * */
     private function output_population()
     {
-        echo "Початкова популяція:\n";
+        echo "Поточна популяція:\n";
         for ($i = 0; $i < count($this->population); $i++) {
             if ($i < 9) {
-                echo /*"Питання номер " .*/
+                echo "Особина номер " .
                     ($i + 1) . "  |";
             } else {
-                echo /*"Питання номер " .*/
+                echo "Особина номер " .
                     ($i + 1) . " |";
             }
-            for ($j = 0; $j < count($this->population[$i]); $j++) {
-                echo $this->population[$i][$j] . "| ";
+            if (isset($this->population[$i])) {
+                for ($j = 0; $j < count($this->population[$i]); $j++) {
+                    echo $this->population[$i][$j] . "| ";
+                }
             }
             echo "\n";
         }
+//        print_r($this->population);
     }
+
 
     /**
      * respondToTheQuestion
@@ -157,6 +460,7 @@ class GeneticTask extends BaseTask
         }
         return $experts;
     }
+
 
     /**
      * individualPrice
@@ -177,59 +481,30 @@ class GeneticTask extends BaseTask
         return $individual_price;
     }
 
+
     /**
      * minKey
      * Ключ найдешевшої особини
      *
-     * @param array (int)    - ціни всіх особин що дали заключення по всіх питтаннях
-     * @return  array (int) - індекс особини з найменшою ціною
+     * @param array (int) $individual_prices - ціни всіх особин що дали заключення по всіх питтаннях
+     * @return  array (int) $min_key             - індекс особини з найменшою ціною
      * */
     private function minKey($individual_prices)
     {
-        $min_key = array_keys($individual_prices, min($individual_prices));
-        $min_key = $min_key [0];
+//        print_r($individual_prices);
+        $min_key = array_search(min($individual_prices),$individual_prices);
         return $min_key;
     }
 
-    /**
-     * bestIndividuals
-     * Ключі найдешевших особин
-     *
-     * @param array (int)    - ціни всіх особин що дали заключення по всіх питтаннях
-     * @param array (int)    - особини що не дали заключення по всім питанням
-     * @return  array (int)  - індекси найкращих особин серед тих хто дав заключення по всіх питаннях
-     * */
-    private function bestIndividuals($individual_prices, $not_assessed_individuals)                 //!!!!!!!!!!!!!!!!!!!
-    {
-        $need_best = count($not_assessed_individuals);
-        $bests = array();
-        $i = 0;
-        while ($i != $need_best) {
-            $min_key = $this->minKey($individual_prices);
-            if (!in_array($min_key, $not_assessed_individuals) && !in_array($min_key, $bests) ) {
-                $bests[] = $min_key;
-                unset($individual_prices[$min_key]);
-                $individual_prices = array_values($individual_prices);
-                $i++;
-            } else {
-                unset($individual_prices[$min_key]);
 
-                $individual_prices = array_values($individual_prices);
-            }
-        }
 
-        echo "Найдешевше коштують особини:\n";
 
-        print_r($bests);
-
-        return $bests;
-    }
 
     /**
      * populationRandomise
      * Ствоенння випадкової популяції
      *
-     * @param int   - розмір популяції (кількість питаннь)
+     * @param int - розмір популяції (кількість питаннь)
      * */
     private function populationRandomise($populationSize)
     {
@@ -241,6 +516,7 @@ class GeneticTask extends BaseTask
             $this->population [] = $single;
         }
     }
+
 
     /**
      * outArr
@@ -255,6 +531,7 @@ class GeneticTask extends BaseTask
         }
         echo "\n";
     }
+
 
     /**
      * CrossingPoints
@@ -276,12 +553,13 @@ class GeneticTask extends BaseTask
             }
         }
         $crossing_points[] = 0;
-        echo "Точки схрещування:\n";
+//        echo "Точки схрещування:\n";
         rsort($crossing_points);
-        $this->outArr($crossing_points);
+//        $this->outArr($crossing_points);
 
         return $crossing_points;
     }
+
 
     /**
      * individualSplice
@@ -289,25 +567,26 @@ class GeneticTask extends BaseTask
      *
      * @param array (int)   - точки схрещування
      * @param array (int)   - індекси найкращих особин серед тих хто дав заключення по всіх питаннях
-     * @param int           - індекс зовнішнього масиву
+     * @param int - індекс зовнішнього масиву
      * @return  array (int) - масив поділений відносно точок схрещування
      * */
-    private function individualSplice($crossing_points, $bests, $i)
+    private function individualSplice(array $needArray, $crossing_points, $bests, $i)
     {
         $spliced_array = array();
         for ($j = 0; $j < count($crossing_points); $j++) {
-            $this->population[$bests[$i]];
-            $spliced_array[] = array_splice($this->population[$bests[$i]], $crossing_points[$j]);
+//            $old_spliced_array = $this->population[$bests[$i]];
+            $spliced_array[] = array_splice($needArray, $crossing_points[$j]);
         }
         return $spliced_array;
     }
+
 
     /**
      * individualMerge
      * Проводить ітерацію по злиттю із individualSplice() кожної з найкращих особин
      *
-     * @param int           - індекс зовнішнього масиву
-     * @param int           - кількість найкращих особин (визначається на основі того скілки особин вимерли)
+     * @param int - індекс зовнішнього масиву
+     * @param int - кількість найкращих особин (визначається на основі того скілки особин вимерли)
      * @param array (int)   - масив нових дочірніх особин на момент злиття(створення розбиттям найкраших особин по точкам схрещування)
      * @param array (int)   - масив вже розбитої відносно точок схрещування особини
      * @return  array (int) - масив нових дочірніх особин на момент злиття(створення розбиттям найкраших особин по точкам схрещування)
@@ -326,8 +605,6 @@ class GeneticTask extends BaseTask
         }
         return $children;
     }
-
-
 
 
 }
