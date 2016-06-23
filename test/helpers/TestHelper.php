@@ -11,5 +11,6 @@ define('ROOT_PATH', __DIR__ . '/../../');
 $loader = new \Phalcon\Loader();
 $loader->registerNamespaces([
     'Cli\Test' => ROOT_PATH . '/test/library/cli/',
-    'Cli' => ROOT_PATH . '/app/library/cli/'
+    'Cli' => ROOT_PATH . '/app/library/cli/',
+    'Tasks' => ROOT_PATH . '/app/tasks/'
 ])->register();

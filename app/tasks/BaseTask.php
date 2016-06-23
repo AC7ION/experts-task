@@ -20,16 +20,16 @@ define('INPUT_DIR', dirname(__DIR__) . '/input/');
 class BaseTask extends Task {
 
 	// кількість напрямів
-	protected $directionsNum = 0;
+	public $directionsNum = 0;
 
 	// кількість експертів
-	protected $expertsNum = 0;
+	public $expertsNum = 0;
 
 	// матриця вартостей
-	protected $costs = array();
+	public $costs = array();
 
 	// матриця відповідності експерт -> які задачі може вирішити
-	protected $couldSolve = array();
+	public $couldSolve = array();
 
 
 	public function initialize($params = array())
@@ -56,7 +56,7 @@ class BaseTask extends Task {
 	 *
 	 * @param $params
 	 */
-	protected function readInputFromFile($params)
+	public function readInputFromFile($params)
 	{
 
 		$i = 0;
@@ -127,7 +127,7 @@ class BaseTask extends Task {
 	 * @param array $experts
 	 * @return int
 	 */
-	protected function countTotalSum(array $experts)
+	public function countTotalSum(array $experts)
 	{
 		$sum = 0;
 
@@ -148,7 +148,7 @@ class BaseTask extends Task {
 	 * @param $expertNum
 	 * @return mixed
 	 */
-	protected function isExpertAllowed($directionNum, $expertNum)
+	public function isExpertAllowed($directionNum, $expertNum)
 	{
 		return $this->couldSolve[$directionNum][$expertNum];
 	}
@@ -160,7 +160,7 @@ class BaseTask extends Task {
 	 * @param $expertNum
 	 * @return array
 	 */
-	protected function getExpertsDirections($expertNum)
+	public function getExpertsDirections($expertNum)
 	{
 		$allowedDirections = array();
 
@@ -180,7 +180,7 @@ class BaseTask extends Task {
 	 * @param array $experts array with experts numbers
  	 * @return bool
 	 */
-	protected function isExpertsSolvesTheTask(array $experts)
+	public function isExpertsSolvesTheTask(array $experts)
 	{
 		$solvedDirections = array();
 
