@@ -25,7 +25,7 @@ class GreedyTask extends BaseTask
 		// initialize parent task
 		// with reading from files etc.
 		parent::initialize($params);
-
+		$this->runtime();
 		Output::stdOutGreen("Greedy algorithm");
 
 		$selectedExperts = array();
@@ -42,6 +42,8 @@ class GreedyTask extends BaseTask
 				break;
 			}
 		}
+
+		echo "Виконано за: ".$this->runtime()."\n";
 
 //		echo $this->countTotalSum(array(0, 3, 5)) . "\n";
 //		echo $this->isExpertAllowed(5, 2) . "\n";

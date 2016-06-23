@@ -196,4 +196,38 @@ class BaseTask extends Task {
 		return $this->directionsNum == count($solvedDirections);
 	}
 
+
+	protected function runtime($type='0',$mark=NULL)
+	{
+		global $_runtime_microsec;
+
+		/* Надо вернуть разницу? */
+		if( $mark!==NULL ) if( isset($_runtime_microsec[$type]) && isset($_runtime_microsec[$mark]) ) return sprintf("%f", $_runtime_microsec[$mark]-$_runtime_microsec[$type]);
+
+		if( PHP_VERSION >= '5.0.0' )
+		{
+			$mtime = microtime(true);
+		}
+		else
+		{
+			$mtime = microtime();
+			$mtime = explode(" ", $mtime);
+			$mtime = $mtime[1] + $mtime[0];
+		}
+
+		/* Засекаем время */
+		if( !is_array($_runtime_microsec) ) $_runtime_microsec = array();
+		if( !isset($_runtime_microsec[$type]) )
+		{
+			$_runtime_microsec[$type] = $mtime;
+		}
+
+		/* Вычисляем время */
+		$mtime -= $_runtime_microsec[$type];
+
+		/* Форматируем вывод */
+		$mtime = sprintf("%f", $mtime);
+		return $mtime;
+	}
+
 }

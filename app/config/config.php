@@ -9,7 +9,7 @@ $settings = array(
 		'adapter' => 'Mysql',
 		'host' => 'localhost',
 		'username' => 'root',
-		'password' => '',
+		'password' => '3923',
 		'name' => 'cli',
 		'port' => 3306
 	),

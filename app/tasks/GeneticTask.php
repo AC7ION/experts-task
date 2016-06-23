@@ -10,8 +10,8 @@
 namespace Tasks;
 
 use \Cli\Output as Output;
-const POPULATION_SIZE = 50;
-const ITERATION = 1000;
+const POPULATION_SIZE = 40;
+const ITERATION = 100;
 
 class GeneticTask extends BaseTask
 {
@@ -20,35 +20,55 @@ class GeneticTask extends BaseTask
     public function mainAction($params)
     {
         parent::initialize($params);
+        $this->runtime();
         $best_prices = array();
+        $best_individuals = array();
         $best_individual = null;
-        $this->populationRandomise(POPULATION_SIZE);
+        $this->population = $this->populationRandomise(POPULATION_SIZE);
         $this->output_population();
         Output::stdOutGreen("Genetic algorithm");
         for ($i = 0; $i < ITERATION; $i++) {
             $individuals = $this->analysisIndividuals();
 //            $this->output_population();
             if (!empty($individuals['not_assessed'])) {
-                $bests = $this->bestIndividuals($individuals ['prices'], $individuals['not_assessed']);
-                $children = $this->createСhild($bests);
+                $bests = $this->bestIndividuals($individuals ['assessed_prices'], $individuals['not_assessed']);
+                $children = $this->createСhild($bests['bests'], $bests['need_random']);
 //                $this->output_population();
 
 
                 $this->insertNewChildrens($individuals['not_assessed'], $children);
-                $best_individual = $this->minKey($individuals["prices"]);
+                $best_individual = $this->minKey($individuals["assessed_prices"]);
 //                $this->output_population();
             }
-            echo "Поточна найкраща особина " . $best_individual . "\n";
-            $best_prices[] = $this->individualPrice($this->respondToTheQuestion($this->population[$best_individual]));
-            $best_price = $this->individualPrice($this->respondToTheQuestion($this->population[$best_individual]));
-            echo "Ціна найкращого " . $best_price . "\n";
+
+            $experts = $this->respondToTheQuestion($this->population[$best_individual]);
+
+            $best_price = $this->individualPrice($experts);
+
+            if ($best_price != 0) {
+                echo "Поточна найкраща особина " . $best_individual . "\n";
+                $best_prices[] = $best_price;
+                $best_individuals[] = $best_individual;
+                echo "Ціна найкращого " . $best_price . "\n";
+//                print_r($this->population[$best_individual]);
+
+            } else {
+                echo "Популяція недіездатна вона буде перероблена\n";
+            }
+
         }
+        $this->output_population();
+        echo "Виконано за: ".$this->runtime()."\n";
 //        $best_prices = array_unique($best_prices);
-//        print_r($best_prices);
+////        print_r($best_prices);
 //        $best_key = $this->minKey($best_prices);
 
 //        echo "Знайдений найкраща особина на ітерації " . $best_key . "\n";
-//        echo "Ціна найкращого " . $best_prices[$best_key] . "\n";
+//        $experts = $this->respondToTheQuestion($this->population[$best_individuals[$best_key]]);
+//        echo min($best_prices )."\n";
+//        echo "Ціна найкращого " . $this->individualPrice($experts) . "\n";
+//        echo "Найкращий " . $best_individuals[$best_key] . "\n";
+//        print_r($this->population[$best_individuals[$best_key]]);
 
 
     }
@@ -62,8 +82,11 @@ class GeneticTask extends BaseTask
      * @param   array (int)      - массив нових нащадків
      * @return  int             - популяцію із новими нащадками(можна проводити нову ітерацію цикла)
      * */
-    private function insertNewChildrens(array $individuals, array $childrens)
-    {
+    private
+    function insertNewChildrens(
+        array $individuals,
+        array $childrens
+    ) {
         foreach ($individuals as $individual) {
             $children = array_pop($childrens);
             $this->randomChange($children);
@@ -79,8 +102,10 @@ class GeneticTask extends BaseTask
      * @param   array (int)      - новостворена особина
      * @return  int             - популяцію із новими нащадками(можна проводити нову ітерацію цикла)
      * */
-    private function randomChange(array $children)
-    {
+    private
+    function randomChange(
+        array $children
+    ) {
         mt_rand(0, $this->expertsNum);
         $experts = $this->respondToTheQuestion($children);
         if (!$this->isExpertsSolvesTheTask($experts)) {
@@ -113,12 +138,14 @@ class GeneticTask extends BaseTask
      * 'prices' => $individual_prices
      * );
      * */
-    private function analysisIndividuals()
+    private
+    function analysisIndividuals()
     {
         $a = 0;
         $b = 0;
         $i = 0;
-        $individual_prices = array();
+        $assessed_individual_prices = array();
+        $not_assessed_individual_prices = array();
         $assessed_individuals = array();
         $not_assessed_individuals = array();
 
@@ -129,20 +156,23 @@ class GeneticTask extends BaseTask
             if ($this->isExpertsSolvesTheTask($experts)) {
                 $a++;
                 $assessed_individuals[] = $i;
+                $individual_price = $this->individualPrice($experts);
+                $assessed_individual_prices[] = $individual_price;
             } else {
                 $b++;
                 $not_assessed_individuals [] = $i;
                 $this->population[$i] = array();
+                $individual_price = $this->individualPrice($experts);
+                $not_assessed_individual_prices[] = $individual_price;
 //                unset($this->population[$i]);
 //                unset($individual);
             }
-            $individual_price = $this->individualPrice($experts);
-            $individual_prices[] = $individual_price;
+
             $i++;
         }
-        if (count($not_assessed_individuals) < POPULATION_SIZE/10) {
+        if (count($not_assessed_individuals) < POPULATION_SIZE / 10) {
 
-            $worsts = $this->needDie($not_assessed_individuals, $individual_prices);
+            $worsts = $this->needDie($not_assessed_individuals, $assessed_individual_prices);
             $not_assessed_individuals = array_merge($not_assessed_individuals, $worsts);
         }
 //        echo "Ціни особин \n";
@@ -165,7 +195,8 @@ class GeneticTask extends BaseTask
         return array(
             'assessed'     => $assessed_individuals,
             'not_assessed' => $not_assessed_individuals,
-            'prices'       => $individual_prices
+            'assessed_prices'       => $assessed_individual_prices,
+            'not_assessed_prices'       => $not_assessed_individual_prices
         );
     }
 
@@ -179,8 +210,11 @@ class GeneticTask extends BaseTask
      * @param   array (int)           - 0 або 1
      * @return  int           - 1 або 0
      * */
-    private function needDie(array $not_assessed_individuals, array $individual_prices)
-    {
+    private
+    function needDie(
+        array $not_assessed_individuals,
+        array $individual_prices
+    ) {
         $not_assessed_individuals_size = POPULATION_SIZE / 10;
         $need_die = $not_assessed_individuals_size - count($not_assessed_individuals);
         $worsts = array();
@@ -215,23 +249,45 @@ class GeneticTask extends BaseTask
      * @param array (int)    - особини що не дали заключення по всім питанням
      * @return  array (int)  - індекси найкращих особин серед тих хто дав заключення по всіх питаннях
      * */
-    private function bestIndividuals($individual_prices, $not_assessed_individuals)
-    {
+    private
+    function bestIndividuals(
+        $individual_prices,
+        $not_assessed_individuals
+    ) {
         $need_best = count($not_assessed_individuals);
         $bests = array();
         $i = 0;
-        while ($i != $need_best) {
-            $min_key = $this->minKey($individual_prices);
-            if (!in_array($min_key, $not_assessed_individuals)) {
-                $bests[] = $min_key;
-                unset($individual_prices[$min_key]);
-                $individual_prices = array_values($individual_prices);
-                $i++;
-            } else {
-                unset($individual_prices[$min_key]);
+        $j = 0;
+            while ($i != $need_best) {
+                $min_key = $this->minKey($individual_prices);
+                if (!in_array($min_key, $not_assessed_individuals) && !in_array($min_key, $bests)) {
+                    $bests[] = $min_key;
+                    unset($individual_prices[$min_key]);
+                    $individual_prices = array_values($individual_prices);
+                    $i++;
+                } else {
+                    unset($individual_prices[$min_key]);
 
 //                $individual_prices = array_values($individual_prices);
+                }
+                $j++;
+
+                if(empty($individual_prices))
+                {
+                    break;
+                }
+
             }
+//        echo "individual_prices $j \n";
+//        print_r($individual_prices);
+//        echo "bests \n";
+//        print_r($bests);
+
+        if(count($individual_prices) < $need_best ) {
+            $need_randomise = $need_best - count($bests);
+        }
+        else{
+            $need_randomise = 0;
         }
 //        if (!empty($bests)) {
 //            echo "Найдешевше коштують особини:\n";
@@ -242,7 +298,10 @@ class GeneticTask extends BaseTask
 //            echo "Жопа\n";
 //        }
 
-        return $bests;
+        return array(
+            'bests' => $bests,
+            'need_random' =>  $need_randomise
+        );
     }
 
 
@@ -253,11 +312,13 @@ class GeneticTask extends BaseTask
      * @param array (int) $individual_prices - ціни всіх особин що дали заключення по всіх питтаннях
      * @return  array (int) $max_key             - індекс особини з найменшою ціною
      * */
-    private function maxKey($individual_prices)
-    {
+    private
+    function maxKey(
+        $individual_prices
+    ) {
 //        echo "MAX ". max ($individual_prices)."\n";
 //        print_r($individual_prices);
-        $max_key = array_search(max($individual_prices) , $individual_prices);
+        $max_key = array_search(max($individual_prices), $individual_prices);
         return $max_key;
     }
 
@@ -268,8 +329,10 @@ class GeneticTask extends BaseTask
      * @param   int - 0 або 1
      * @return  int           - 1 або 0
      * */
-    private function replace($num)
-    {
+    private
+    function replace(
+        $num
+    ) {
         switch ($num) {
             case 1:
                 $num = 0;
@@ -290,8 +353,10 @@ class GeneticTask extends BaseTask
      * @param array (int)   - одна особина популяції ( один з згенерованих нащадків )
      * @return  array (int) - одна особина популяції після проведення мутації( один з згенерованих нащадків )
      * */
-    private function mutation(array $individual)
-    {
+    private
+    function mutation(
+        array $individual
+    ) {
         echo "mutation start \n";
         $this->outArr($individual);
         $mutation_gen = mt_rand(0, $this->expertsNum - 1);
@@ -312,8 +377,10 @@ class GeneticTask extends BaseTask
      * @param   array (int) - одна особина популяції ( один з згенерованих нащадків )
      * @return  array (int) - одна особина популяції після проведення селекції( один з згенерованих нащадків )
      * */
-    private function selection(array $individual)
-    {
+    private
+    function selection(
+        array $individual
+    ) {
 
         $experts = $this->respondToTheQuestion($individual);
         if ($this->isExpertsSolvesTheTask($experts)) {
@@ -348,8 +415,10 @@ class GeneticTask extends BaseTask
      * @param array (int)   - одна особина популяції ( один з згенерованих нащадків )
      * @return  array (int) - одна особина популяції після проведення реанімації( один з згенерованих нащадків )
      * */
-    private function reanimation(array $individual)
-    {
+    private
+    function reanimation(
+        array $individual
+    ) {
         $experts = $this->respondToTheQuestion($individual);
         $this->outArr($experts);
         if (!$this->isExpertsSolvesTheTask($experts)) {
@@ -376,31 +445,53 @@ class GeneticTask extends BaseTask
      * @param array (int)   - індекси найкращих особин серед тих хто дав заключення по всіх питаннях
      * @return  array (int) - закінчений масив нових дочірніх особин (створення розбиттям найкраших особин по точкам схрещування)
      * */
-    private function createСhild(array $bests)
-    {
-        if (isset($bests)) {
+    private
+    function createСhild(
+        array $bests , $need_more
+    ) {
+        if (!empty($bests)) {
             $childrens = array();
             for ($i = 0; $i < count($bests); $i++) {
                 $childrens[] = array();
             }
 
             $bests_count = count($bests);
-            $crossing_points = $this->CrossingPoints($bests);
+            if ($this->expertsNum <= count($bests))
+            {
+                $bests_many =  array_chunk($bests,$this->expertsNum-1);
+                $k = 0;
+                foreach ($bests_many as $item)
+                {
+                    $crossing_points = $this->CrossingPoints($item);
+                    $item_count = count($item);
 
-            for ($i = 0; $i < $bests_count; $i++) {
-                $need_array = $this->population[$bests[$i]];
-//                echo "Поточний найкращий \n";
-//                $this->outArr($need_array);
-//                echo "\n";
+                    for ($i = $k;$i < $item_count ; $i++) {
+                        $need_array = $this->population[$bests[$i]];
+                        $spliced_array = $this->individualSplice($need_array, $crossing_points, $item, $i);
+                        $childrens = $this->individualMerge($i, $item_count , $childrens, $spliced_array);
+                        $k++;
+                        echo "i $i\n";
 
-                $spliced_array = $this->individualSplice($need_array, $crossing_points, $bests, $i);
+                    }
+                }
+            }
+            else{
+                $crossing_points = $this->CrossingPoints($bests);
 
+                for ($i = 0; $i < $bests_count; $i++) {
+                    $need_array = $this->population[$bests[$i]];
+                    $spliced_array = $this->individualSplice($need_array, $crossing_points, $bests, $i);
+                    $childrens = $this->individualMerge($i, $bests_count, $childrens, $spliced_array);
 
-//            echo "spliced_array :\n";
-//            print_r($spliced_array);
+                }
+            }
 
-                $childrens = $this->individualMerge($i, $bests_count, $childrens, $spliced_array);
-
+            if ($need_more > 0)
+            {
+                $random_child = $this->populationRandomise($need_more);
+                echo "random_child\n";
+                print_r($random_child);
+                $childrens = array_merge($childrens, $random_child);
 
             }
 
@@ -421,7 +512,8 @@ class GeneticTask extends BaseTask
      * Вивід масиву в лінію
      * @param
      * */
-    private function output_population()
+    private
+    function output_population()
     {
         echo "Поточна популяція:\n";
         for ($i = 0; $i < count($this->population); $i++) {
@@ -450,8 +542,10 @@ class GeneticTask extends BaseTask
      * @param array (int)    - вся особина
      * @return  array (int) - індекси експертів що дали заключення
      * */
-    private function respondToTheQuestion($individual)
-    {
+    private
+    function respondToTheQuestion(
+        $individual
+    ) {
         $experts = array();
         foreach ($individual as $key => $gen) {
             if ($gen == 1) {
@@ -470,8 +564,10 @@ class GeneticTask extends BaseTask
      * @return  int         - ціна особини
      * */
 
-    private function individualPrice($experts)
-    {
+    private
+    function individualPrice(
+        $experts
+    ) {
         $costs_good_expert = array();
         foreach ($experts as $expert) {
             $costs_good_expert[$expert] = $this->costs[$expert];
@@ -489,15 +585,14 @@ class GeneticTask extends BaseTask
      * @param array (int) $individual_prices - ціни всіх особин що дали заключення по всіх питтаннях
      * @return  array (int) $min_key             - індекс особини з найменшою ціною
      * */
-    private function minKey($individual_prices)
-    {
+    private
+    function minKey(
+        $individual_prices
+    ) {
 //        print_r($individual_prices);
-        $min_key = array_search(min($individual_prices),$individual_prices);
+        $min_key = array_search(min($individual_prices), $individual_prices);
         return $min_key;
     }
-
-
-
 
 
     /**
@@ -505,16 +600,22 @@ class GeneticTask extends BaseTask
      * Ствоенння випадкової популяції
      *
      * @param int - розмір популяції (кількість питаннь)
+     * @return int - розмір популяції (кількість питаннь)
      * */
-    private function populationRandomise($populationSize)
-    {
+    private
+    function populationRandomise(
+        $populationSize
+    ) {
+        $population = array();
         for ($i = 0; $i < $populationSize; $i++) {
             $single = array();
             for ($j = 0; $j < $this->expertsNum; $j++) {
                 $single[] = mt_rand(0, 1);
             }
-            $this->population [] = $single;
+            $population [] = $single;
         }
+
+        return $population ;
     }
 
 
@@ -524,8 +625,10 @@ class GeneticTask extends BaseTask
      *
      * @param array (int) - масив для виводу
      * */
-    private function outArr(array $arr)
-    {
+    private
+    function outArr(
+        array $arr
+    ) {
         for ($i = 0; $i < count($arr); $i++) {
             echo $arr[$i] . " ";
         }
@@ -541,11 +644,12 @@ class GeneticTask extends BaseTask
      * @return  array (int) - точки схрещування
      * */
 
-    private function CrossingPoints($bests)
-    {
+    private
+    function CrossingPoints(
+        $bests
+    ) {
         $crossing_points = array();
         $quantity = count($bests);
-
         while (count($crossing_points) != $quantity - 1) {
             $crossing_point = mt_rand(1, $this->expertsNum - 1);
             if (!in_array($crossing_point, $crossing_points)) {
@@ -570,8 +674,13 @@ class GeneticTask extends BaseTask
      * @param int - індекс зовнішнього масиву
      * @return  array (int) - масив поділений відносно точок схрещування
      * */
-    private function individualSplice(array $needArray, $crossing_points, $bests, $i)
-    {
+    private
+    function individualSplice(
+        array $needArray,
+        $crossing_points,
+        $bests,
+        $i
+    ) {
         $spliced_array = array();
         for ($j = 0; $j < count($crossing_points); $j++) {
 //            $old_spliced_array = $this->population[$bests[$i]];
@@ -591,8 +700,13 @@ class GeneticTask extends BaseTask
      * @param array (int)   - масив вже розбитої відносно точок схрещування особини
      * @return  array (int) - масив нових дочірніх особин на момент злиття(створення розбиттям найкраших особин по точкам схрещування)
      * */
-    private function individualMerge($i, $bests_count, $children, $spliced_array)
-    {
+    private
+    function individualMerge(
+        $i,
+        $bests_count,
+        $children,
+        $spliced_array
+    ) {
         $k = 0;
         for ($j = $i; $j < $bests_count; $j++) {
             $children[$j] = array_merge($children[$j], $spliced_array[$k]);
